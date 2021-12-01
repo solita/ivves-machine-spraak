@@ -10,5 +10,6 @@ do
 done
 #wget -O /content/requirements.txt https://raw.githubusercontent.com/solita/ivves-machine-spraak/main/requirements.txt
 wget -q -O /content/modules/utils.py https://raw.githubusercontent.com/solita/ivves-machine-spraak/main/modules/utils.py
+wget -q -O /content/modules/pca_clustering.py https://raw.githubusercontent.com/solita/ivves-machine-spraak/main/modules/pca_clustering.py
 #python3 -m pip install -r /content/requirements.txt
 echo "Setup successful."
