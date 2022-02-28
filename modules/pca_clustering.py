@@ -9,7 +9,7 @@ from matplotlib.patches import Patch
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
-from sklearn.base import TransformerMixin
+import librosa
 
 
 def split_spec(spec, window, stride=1, verbose=False):
@@ -20,7 +20,7 @@ def split_spec(spec, window, stride=1, verbose=False):
     within the segments (unlike with typical filtering in signal processing).
     The output is a matrix with each row corresponding to one of the flattened
     segments. The input data is padded (minimally) so that it can be covered
-    evenly by the windows with the given stride.
+    evenly by windows with the given stride.
 
     Arguments:
         spec
@@ -51,14 +51,15 @@ def split_spec(spec, window, stride=1, verbose=False):
     s[:frames, :] = spec.T.copy()
     steps = (frames + padding - wdw_len) / stride
     assert steps.is_integer()
-    steps = int(steps) + 1 # +1 for the initial step
+    steps = int(steps) + 1  # +1 for the initial step
     X = np.zeros((steps, wdw_len * freqs))
     if verbose:
         print(f"padding={padding}")
         print(f"steps={steps}")
     for i in range(steps):
         # flatten so we make a copy
-        X[i, :] = (s[i * stride : i * stride + wdw_len, :] * window[:, np.newaxis]).flatten()
+        X[i, :] = (s[i * stride:i * stride + wdw_len, :]
+                   * window[:, np.newaxis]).flatten()
     return X
 
 
@@ -93,7 +94,8 @@ def plot_pca(spec_pca, times, stride=1, ax=None, halfrange=0):
         ax
             - Only returned if ax was not provided. The ax corresponding to fig
     """
-    # To roughly match the original audio length we recover the "unstrided" resolution first
+    # To roughly match the original audio length we recover the "unstrided"
+    # resolution first
     s_strided = np.repeat(spec_pca, repeats=stride, axis=1)
     if ax is None:
         fig = plt.figure(figsize=(18, 5))
@@ -104,7 +106,7 @@ def plot_pca(spec_pca, times, stride=1, ax=None, halfrange=0):
     # Show at most the first 10 principal components
     n_components_to_show = min(s_strided.shape[0], 10)
     max_len = min(len(times), s_strided.shape[1])
-    Z = s_strided[:n_components_to_show,:max_len]
+    Z = s_strided[:n_components_to_show, :max_len]
     if halfrange > 0:
         cnorm = CenteredNorm(halfrange=halfrange)
     else:
@@ -166,22 +168,29 @@ def plot_pca_grid(spec_pcas, ts, stride=1, names=[], title='', hl_idx=[],
         for s in spec_pcas:
             hr = max(hr, abs(s.min()), abs(s.max()))
 
-    fig, axs = plt.subplots(4, 2, figsize=(14,8))
+    nclips = len(spec_pcas)
+    ncols = 2
+    nrows = ceil(nclips/ncols)
+    fig, axs = plt.subplots(nrows=nrows, ncols=2, figsize=(14, 8))
     fig.tight_layout(pad=1.5, rect=[0, 0.03, 1, 0.95])
 
     p = None
     for n, ax in enumerate(axs.flat):
-        p = plot_pca(spec_pcas[n], ts[n], stride=stride, ax=ax, halfrange=hr)
-        if len(names) > 0:
-            ax.set_title(names[n])
-        if n < len(axs.flat) - 2:
-            ax.set_xlabel('')
-        if n % 2 == 1:
-            ax.set_ylabel('')
-        if n in hl_idx:
-            ax.tick_params(color=hl_color, labelcolor=hl_color)
-            for spine in ax.spines.values():
-                spine.set_edgecolor(hl_color)
+        if n >= nclips:
+            fig.delaxes(ax)
+        else:
+            p = plot_pca(spec_pcas[n], ts[n], stride=stride, ax=ax,
+                         halfrange=hr)
+            if len(names) > 0:
+                ax.set_title(names[n])
+            if n < len(axs.flat) - 2:
+                ax.set_xlabel('')
+            if n % 2 == 1:
+                ax.set_ylabel('')
+            if n in hl_idx:
+                ax.tick_params(color=hl_color, labelcolor=hl_color)
+                for spine in ax.spines.values():
+                    spine.set_edgecolor(hl_color)
 
     if hl_idx and hl_label:
         fig.legend(handles=[Patch(facecolor=hl_color, label=hl_label)],
@@ -191,15 +200,15 @@ def plot_pca_grid(spec_pcas, ts, stride=1, names=[], title='', hl_idx=[],
         fig.subplots_adjust(right=0.93)
         cbar_ax = fig.add_axes([0.95, 0.4+(0.2/3)*2, 0.01, 0.4])
         norm = Normalize(vmin=-hr, vmax=hr)
-        cb = fig.colorbar(cm.ScalarMappable(norm=norm, cmap='PRGn'),
-                          cax=cbar_ax)
+        fig.colorbar(cm.ScalarMappable(norm=norm, cmap='PRGn'),
+                     cax=cbar_ax)
 
     if title:
         fig.suptitle(title)
     return fig
 
 
-def sample2spec(samples, sample_rate, tfm=''):
+def sample2spec(samples, sample_rate, tfm='', fft_params=None):
     """Convert a list of audio samples into Scipy spectrograms. Notice that
     scipy spectrogram matrices are of the form (freqs x times). Since the
     frequencies are our features, we have to take the transpose of the
@@ -226,7 +235,7 @@ def sample2spec(samples, sample_rate, tfm=''):
                 each sample
 
         specs
-            - List of spectrograms from scipy.signal.spectrogram for each sample
+            - List of spectrograms from signal.spectrogram for each sample
     """
     freqs, times, specs = [], [], []
     if not tfm:
@@ -234,11 +243,20 @@ def sample2spec(samples, sample_rate, tfm=''):
     elif tfm == 'log':
         tfm = np.log10
 
+    if fft_params is None:
+        nperseg = 1024
+        fft_params = {'window': signal.get_window(('tukey', 0.25), nperseg),
+                      'nperseg': nperseg,
+                      'noverlap': nperseg // 8,
+                      'nfft': nperseg,
+                      'mode': 'magnitude',
+                      'detrend': 'constant'}
     for s in samples:
-        f, t, Sxx = signal.spectrogram(s, sample_rate)
+        f, t, Sxx = signal.spectrogram(s, sample_rate, **fft_params)
         freqs.append(f)
         times.append(t)
         specs.append(tfm(Sxx))
+    print(f'STFT window is {fft_params["nperseg"] / sample_rate:.3f} s.')
     return freqs, times, specs
 
 
@@ -247,8 +265,7 @@ def spec2pca(Sxx, window, stride=1, n_components=10, normalise=True, sclr=None,
     """Reduce the dimension of spectrograms by projecting them to axes of
     principal components. The principal axes can either be provided or computed
     from scratch. The input features to PCA are computed with `split_spec`
-    according to the given window and stride. The additional kwargs are passed
-    to the PCA if one is instantiated.
+    according to the given window and stride.
 
     Arguments:
         Sxx
@@ -267,8 +284,8 @@ def spec2pca(Sxx, window, stride=1, n_components=10, normalise=True, sclr=None,
             - Number of principal components to keep (default: 10)
 
         normalise
-            - Whether to standardise the spectrograms individually prior to
-                fitting PCA (default: True)
+            - Whether to standardise the spectrograms individually
+              (frequency-wise) prior to fitting PCA (default: True)
 
         sclr
             - An instance of one of the sklearn scalers e.g. (`StandardScaler`)
@@ -292,17 +309,28 @@ def spec2pca(Sxx, window, stride=1, n_components=10, normalise=True, sclr=None,
         sclr
             - Either the original scaler instance or the `StandardScaler`
                 created in this function
+
+        clip_scalers
+            - A list of `StandardScaler` instances used to normalise each
+              individual spectrogram prior to windowing. This mainly needed
+              for debugging and analysing the results, not for any algorithm.
     """
     specs = [s.copy() for s in Sxx]
     # make sure each clip is standardised individually
+    clip_scalers = []
     if normalise:
-        specs = [StandardScaler().fit_transform(s.T).T for s in specs]
+        for i in range(len(specs)):
+            s = specs[i]
+            scl = StandardScaler().fit(s.T)
+            clip_scalers.append(scl)
+            specs[i] = scl.transform(s.T).T
 
     # Xs is a list of windowed segments (as a matrix) for each input clip
     Xs = [split_spec(s, window, stride=stride) for s in specs]
     # X is what we feed into PCA, need to standardise it too
     X = np.vstack(Xs)
-    if not isinstance(sclr, TransformerMixin):
+    if sclr is None:
+        print("Fitting new scaler")
         sclr = StandardScaler().fit(X)
     X = sclr.transform(X)
     # We need the scaled Xs for individual clips
@@ -316,7 +344,7 @@ def spec2pca(Sxx, window, stride=1, n_components=10, normalise=True, sclr=None,
     # but this is only done when visualising the data
     spec_pca = [pca.transform(x).T for x in Xs]
 
-    return spec_pca, pca, sclr
+    return spec_pca, pca, sclr, clip_scalers
 
 
 def cluster(samples, sample_rate, window, stride=1, n_clusters=3,
@@ -376,8 +404,9 @@ def cluster(samples, sample_rate, window, stride=1, n_clusters=3,
 
     fs, ts, Sxx = sample2spec(samples, sample_rate)
 
-    spec_pcas, pca, pca_sclr = spec2pca(Sxx, window, stride=stride,
-            n_components=n_components, normalise=True)
+    spec_pcas, pca, pca_sclr, _ = spec2pca(Sxx, window, stride=stride,
+                                           n_components=n_components,
+                                           normalise=True)
 
     X_pca = np.hstack(spec_pcas).T
     kmeans_sclr = StandardScaler().fit(X_pca)
@@ -386,3 +415,65 @@ def cluster(samples, sample_rate, window, stride=1, n_clusters=3,
     kmeans.fit(X_pca)
 
     return spec_pcas, ts, X_pca, kmeans, pca, kmeans_sclr, pca_sclr
+
+
+def spec2mel(Sxx, sample_rate, n_mels=128, **kwargs):
+    """Convert an existing spectrogram to Mel scale.
+    """
+    D = Sxx ** 2
+    xx = librosa.feature.melspectrogram(S=D, sr=sample_rate, n_mels=n_mels,
+                                        **kwargs)
+    return xx
+
+
+def spec2mfcc(Sxx, sample_rate, n_mels=128, n_mfcc=20, **kwargs):
+    """Extract the MFCCs of an existing spectrogram.
+    """
+    D = Sxx ** 2
+    xx = librosa.feature.melspectrogram(S=D, sr=sample_rate, n_mels=n_mels,
+                                        **kwargs)
+    xx = librosa.feature.mfcc(S=xx, sr=sample_rate, n_mfcc=n_mfcc)
+    return xx
+
+
+def spec2ceps(specs, LB=0, UB=None):
+    """Compute cepstrums for a given list of spectrograms. Retain the
+    coefficients from LB to UB. UB=None corresponds to no upper bound.
+
+    Returns:
+        qfs
+            - A list of the corresponding quefrencies (just for compatibility,
+                                                       not accurate values atm)
+        ceps
+            - The cepstral coefficients of the absolute cepstrum
+
+        cceps
+            - The cepstral coefficients of the complex cepstrum (main useful
+            for if we want to invert the process).
+    """
+    assert LB >= 0
+    ceps = []
+    cceps = []
+    qfs = []
+    for spec in specs:
+        lp = 2*np.log10(np.abs(spec))
+        cp = np.fft.rfft(lp, axis=0)
+        # cp = fft.dct(lp, axis=0)
+        if UB is None:
+            cp = cp[LB:]
+        else:
+            cp = cp[LB:UB]
+        cceps.append(cp)
+        ceps.append(np.abs(cp))
+# fix to correct quefs based on sample_rate & fft_params
+        qfs.append(np.arange(len(cp)))
+    return qfs, ceps, cceps
+
+
+def spec2erg(specs, sample_rate, tfm='', fft_params=None):
+    """Compute the Fourier transform of the log-spectral energy for the
+    spectrograms in specs.
+    """
+    lp = [2*np.log(np.linalg.norm(sx, ord=2, axis=0)) for sx in specs]
+    fs, ts, erg = sample2spec(lp, sample_rate, tfm, fft_params)
+    return fs, ts, erg
