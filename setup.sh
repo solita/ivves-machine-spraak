@@ -9,7 +9,9 @@ do
 	sox $file -r 48000 -b 32 -e floating-point /content/data/converted/`basename $file`
 done
 #wget -O /content/requirements.txt https://raw.githubusercontent.com/solita/ivves-machine-spraak/main/requirements.txt
-wget -q -O /content/modules/utils.py https://raw.githubusercontent.com/solita/ivves-machine-spraak/main/modules/utils.py
-wget -q -O /content/modules/pca_clustering.py https://raw.githubusercontent.com/solita/ivves-machine-spraak/main/modules/pca_clustering.py
+# wget -q -O /content/modules/utils.py https://raw.githubusercontent.com/solita/ivves-machine-spraak/main/modules/utils.py
+wget -q -O /content/modules/utils.py https://github.com/solita/ivves-machine-spraak/blob/test-solitabay-folders/modules/utils.py
+# wget -q -O /content/modules/pca_clustering.py https://raw.githubusercontent.com/solita/ivves-machine-spraak/main/modules/pca_clustering.py
+wget -q -O /content/modules/pca_clustering.py https://github.com/solita/ivves-machine-spraak/blob/test-solitabay-folders/modules/pca_clustering.py
 #python3 -m pip install -r /content/requirements.txt
 echo "Setup successful."
