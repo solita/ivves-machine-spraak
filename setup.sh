@@ -2,7 +2,7 @@
 apt-get install libsox-fmt-all libsox-dev sox > /dev/null
 mkdir -p /content/data/converted /content/data/raw /content/modules
 wget -q -O /content/data.zip "https://solitabay.solita.fi/index.php/s/ZEbs8DcwbQqCWJA/download?path=%2F$1"
-unzip -j /content/data.zip "machine_spraak/$1/*" -d /content/data/raw/
+unzip -j /content/data.zip "$1/*" -d /content/data/raw/
 rm /content/data.zip
 for file in /content/data/raw/*.WAV
 do
