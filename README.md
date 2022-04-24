@@ -8,3 +8,5 @@ You can run the notebooks on Colab through the following links:
 
 - [PCA.ipynb](https://colab.research.google.com/github/solita/ivves-machine-spraak/blob/main/notebooks/PCA.ipynb)
 
+- [puck.ipynb](https://colab.research.google.com/github/solita/ivves-machine-spraak/blob/main/notebooks/puck.ipynb) (for the guest lecture at TUNI on 24.4.2022)
+
