@@ -9,7 +9,10 @@ choices made at each of these steps affects the result and also to shed light
 on what some more complex features actually tell us about the original signal.
 As such, we avoid using libraries with ready-made solutions (such as
 [librosa](https://librosa.org)) and instead build everything from scratch
-with mainly `numpy` and `SciPy`.
+with mainly `numpy` and `SciPy`. Consequently, this course assumes a basic
+knowledge of Python and a passing familiarity with at least `numpy` (although
+with little effort and reading of docs it should be possible to follow the
+notebooks even without the latter).
 
 By the end of this 3-part course you will have learnt how an analogue signal
 is transformed into a digital format so that we can begin analysing it, how
