@@ -27,6 +27,6 @@ from the Colab menu before proceeding with each notebook.
 
 - [Lesson 1 - Digital Signal Processing and Spectral Analysis](https://colab.research.google.com/github/solita/ivves-machine-spraak/blob/main/courses/methods/Methods-1.ipynb)
 
-- [Lesson 2 - Harmonics, cepstrum and the Mel-scale](https://colab.research.google.com/github/solita/ivves-machine-spraak/blob/main/courses/methods/Methods-1.ipynb)
+- [Lesson 2 - Cepstral Analysis, Harmonics and the Mel-scale](https://colab.research.google.com/github/solita/ivves-machine-spraak/blob/main/courses/methods/Methods-2.ipynb)
 
-- [Lesson 3 - Self-similarity for structural analysis](https://colab.research.google.com/github/solita/ivves-machine-spraak/blob/main/courses/methods/Methods-1.ipynb)
+- [Lesson 3 - Self-similarity, Kernels and Structural Analysis](https://colab.research.google.com/github/solita/ivves-machine-spraak/blob/main/courses/methods/Methods-3.ipynb)
