@@ -1,4 +1,4 @@
-# Methods of Audio Analysis in Python
+# Machine Spraak - Methods of Audio Analysis in Python
 
 ## Introduction
 

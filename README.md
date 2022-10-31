@@ -4,7 +4,7 @@ This repo contains the Google Colab integration for notebooks related to the
 IVVES Machine spraak project. In this repo we host both the *Methods of Audio
 Analysis in Python* mini-course as well as other less organised notebooks.
 
-## Methods of Audio Analysis in Python
+## Machine Spraak - Methods of Audio Analysis in Python
 
 You can find the mini-course [here](https://github.com/solita/ivves-machine-spraak/tree/main/courses/methods).
 
